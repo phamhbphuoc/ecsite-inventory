@@ -29,16 +29,16 @@ const formSchema = z.object({
   priceSelling: z.coerce.number().min(0, 'Selling price must be a positive number'),
   priceOriginal: z.coerce.number().min(0).optional(),
   imagesInput: z
-    .string()
+    .union([z.string(), z.array(z.string())])
     .optional()
-    .transform((val) =>
-      val
-        ? val
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : []
-    ),
+    .transform((val) => {
+      if (Array.isArray(val)) return val.filter(Boolean);
+      if (!val) return [] as string[];
+      return val
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }),
   category: z.string().default('Uncategorized'),
   stock: z.coerce.number().min(0).default(0),
   status: z.enum(['draft', 'active', 'archived']).default('draft'),
@@ -59,7 +59,7 @@ const toFormValues = (product?: ProductData): Partial<FormValues> => {
     description: product.description,
     priceSelling: product.price?.selling,
     priceOriginal: product.price?.original,
-    imagesInput: product.images?.join(', '),
+    imagesInput: product.images ?? [],
     category: product.category,
     stock: product.stock,
     status: product.status,
@@ -96,7 +96,8 @@ const ProductForm = ({ product }: ProductFormProps) => {
   const [images, setImages] = React.useState<string[]>(() => {
     const initial = getValues('imagesInput');
     if (!initial) return [];
-    return initial
+    if (Array.isArray(initial)) return initial.filter(Boolean);
+    return String(initial)
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
@@ -149,7 +150,7 @@ const ProductForm = ({ product }: ProductFormProps) => {
   const imagesInput = watch('imagesInput');
   React.useEffect(() => {
     // Keep form field in sync with managed images array
-    setValue('imagesInput', images.join(', '), { shouldValidate: true, shouldDirty: true });
+    setValue('imagesInput', images, { shouldValidate: true, shouldDirty: true });
   }, [images, setValue]);
 
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null);

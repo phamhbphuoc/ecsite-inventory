@@ -9,7 +9,7 @@ export default function Navbar() {
           Inventory Manager
         </Link>
         <Link href="/products/new">
-          <Button size={undefined}>Add Product</Button>
+          <Button>Add Product</Button>
         </Link>
       </div>
     </header>

@@ -18,6 +18,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   throw new Error('Missing MONGODB_URI. Set it in .env.local');
 }
+const MONGODB_URI_STRING: string = MONGODB_URI;
 
 let cached = global.mongoose;
 
@@ -30,7 +31,7 @@ async function dbConnect() {
   if (cached?.conn) return cached.conn;
 
   if (!cached?.promise) {
-    cached!.promise = mongoose.connect(MONGODB_URI).then((m) => m);
+    cached!.promise = mongoose.connect(MONGODB_URI_STRING).then((m) => m);
   }
 
   cached!.conn = await cached!.promise;
