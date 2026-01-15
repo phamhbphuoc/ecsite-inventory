@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -69,6 +70,8 @@ const ProductForm = ({ product }: ProductFormProps) => {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
+    watch,
+    setValue,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,6 +81,12 @@ const ProductForm = ({ product }: ProductFormProps) => {
       ...toFormValues(product),
     },
   });
+
+  const baseCategoryOptions = ['Uncategorized', 'Supplements', 'Cosmetics', 'Food'];
+  const [categoryOptions, setCategoryOptions] = React.useState<string[]>(baseCategoryOptions);
+  const [showCategoryList, setShowCategoryList] = React.useState(false);
+  const [categoryInput, setCategoryInput] = React.useState('');
+  const router = useRouter();
 
   React.useEffect(() => {
     if (product) {
@@ -89,6 +98,46 @@ const ProductForm = ({ product }: ProductFormProps) => {
       });
     }
   }, [product, reset]);
+
+  React.useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await fetch('/api/products?limit=200', { credentials: 'include' });
+        if (!res.ok) return;
+        const json = await res.json();
+        const categories = Array.from(
+          new Set(
+            (json.data as ProductData[])
+              .map((p) => p.category || 'Uncategorized')
+              .concat(product?.category ? [product.category] : [])
+              .concat(baseCategoryOptions)
+          )
+        ).filter(Boolean);
+        setCategoryOptions(categories.length ? categories : baseCategoryOptions);
+      } catch (e) {
+        console.error('Failed to load category options', e);
+        setCategoryOptions((prev) => (prev.length ? prev : baseCategoryOptions));
+      }
+    };
+    loadCategories();
+  }, [product?.category]);
+
+  React.useEffect(() => {
+    if (product?.category) {
+      setCategoryInput(product.category);
+    }
+  }, [product?.category]);
+
+  const imagesInput = watch('imagesInput');
+  const parsedImages = React.useMemo(() => {
+    if (!imagesInput) return [] as string[];
+    return imagesInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }, [imagesInput]);
+
+  const [lightbox, setLightbox] = React.useState<string | null>(null);
 
   const onSubmit = async (values: FormValues) => {
     const payload = {
@@ -117,7 +166,13 @@ const ProductForm = ({ product }: ProductFormProps) => {
     });
 
     if (res.ok) {
-      if (!isEdit) reset();
+      if (isEdit) {
+        router.push('/');
+        router.refresh();
+      } else {
+        reset();
+        router.refresh();
+      }
     } else {
       const errText = await res.text();
       console.error('Failed to save product', errText);
@@ -144,14 +199,28 @@ const ProductForm = ({ product }: ProductFormProps) => {
       </div>
 
       <div>
-        <label htmlFor="priceSelling" className="block">Selling Price</label>
-        <input {...register('priceSelling', { valueAsNumber: true })} id="priceSelling" type="number" className="h-12 w-full border" />
+        <label htmlFor="priceSelling" className="block">Selling Price (VND)</label>
+        <input
+          {...register('priceSelling', { valueAsNumber: true })}
+          id="priceSelling"
+          type="number"
+          inputMode="numeric"
+          className="h-12 w-full border"
+          placeholder="e.g., 150000"
+        />
         {errors.priceSelling && <p className="text-red-500">{errors.priceSelling.message}</p>}
       </div>
 
       <div>
-        <label htmlFor="priceOriginal" className="block">Original Price (optional)</label>
-        <input {...register('priceOriginal', { valueAsNumber: true })} id="priceOriginal" type="number" className="h-12 w-full border" />
+        <label htmlFor="priceOriginal" className="block">Original Price (JPY, optional)</label>
+        <input
+          {...register('priceOriginal', { valueAsNumber: true })}
+          id="priceOriginal"
+          type="number"
+          inputMode="numeric"
+          className="h-12 w-full border"
+          placeholder="e.g., 1200"
+        />
         {errors.priceOriginal && <p className="text-red-500">{errors.priceOriginal.message}</p>}
       </div>
 
@@ -159,11 +228,64 @@ const ProductForm = ({ product }: ProductFormProps) => {
         <label htmlFor="imagesInput" className="block">Images (comma-separated URLs)</label>
         <input {...register('imagesInput')} id="imagesInput" className="h-12 w-full border" />
         {errors.imagesInput && <p className="text-red-500">{errors.imagesInput.message as string}</p>}
+        {parsedImages.length > 0 && (
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
+            {parsedImages.map((url) => (
+              <button
+                type="button"
+                key={url}
+                className="focus:outline-none"
+                onClick={() => setLightbox(url)}
+                aria-label="View image"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="Preview" className="h-16 w-16 rounded object-cover border" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div>
+      <div className="relative">
         <label htmlFor="category" className="block">Category</label>
-        <input {...register('category')} id="category" className="h-12 w-full border" />
+        <input
+          id="category"
+          className="h-12 w-full border px-3"
+          placeholder="Type or choose"
+          autoComplete="off"
+          value={categoryInput}
+          onChange={(e) => {
+            setCategoryInput(e.target.value);
+            setValue('category', e.target.value);
+            setShowCategoryList(true);
+          }}
+          onFocus={() => setShowCategoryList(true)}
+          onBlur={() => setTimeout(() => setShowCategoryList(false), 100)}
+        />
+        {showCategoryList && categoryOptions.length > 0 && (
+          <div className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-white shadow">
+            {categoryOptions
+              .filter((c) => c.toLowerCase().includes(categoryInput.toLowerCase()))
+              .map((c) => (
+                <button
+                  type="button"
+                  key={c}
+                  className="flex w-full items-center px-3 py-2 text-left hover:bg-gray-100"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setCategoryInput(c);
+                    setValue('category', c);
+                    setShowCategoryList(false);
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
+            {categoryOptions.filter((c) => c.toLowerCase().includes(categoryInput.toLowerCase())).length === 0 && (
+              <div className="px-3 py-2 text-sm text-gray-500">No matches</div>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
@@ -189,6 +311,25 @@ const ProductForm = ({ product }: ProductFormProps) => {
       <button type="submit" className="h-12 w-full bg-blue-500 text-white" disabled={isSubmitting}>
         {isSubmitting ? 'Saving…' : product ? 'Update' : 'Submit'}
       </button>
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightbox(null)}
+          role="presentation"
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            className="absolute right-4 top-4 text-2xl text-white"
+            aria-label="Close image"
+          >
+            ×
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="Full image" className="max-h-[90vh] max-w-[90vw] rounded shadow-2xl" />
+        </div>
+      )}
     </form>
   );
 };

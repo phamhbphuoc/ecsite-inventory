@@ -6,7 +6,7 @@ type Product = {
   _id: string;
   title: string;
   images?: string[];
-  price: { selling: number };
+  price: { selling: number; original?: number };
   stock?: number;
   status?: 'draft' | 'active' | 'archived';
   category?: string;
@@ -41,7 +41,7 @@ export default async function HomePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Inventory</h1>
-          <p className="text-sm text-gray-600">Manage products quickly on mobile.</p>
+          <p className="text-sm text-gray-600">Manage products</p>
         </div>
       </div>
 
@@ -50,8 +50,8 @@ export default async function HomePage() {
           <Link key={product._id} href={`/products/${product._id}`} className="transition hover:-translate-y-0.5 hover:shadow">
             <ProductCard
               title={product.title}
-              image={product.images?.[0]}
-              price={product.price.selling}
+              images={product.images}
+              price={product.price}
               stock={product.stock}
               status={product.status}
               category={product.category}
