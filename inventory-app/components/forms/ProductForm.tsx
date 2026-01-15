@@ -18,6 +18,7 @@ export type ProductData = {
   stock?: number;
   status?: 'draft' | 'active' | 'archived';
   notes?: string;
+  deletedAt?: string | Date | null;
 };
 
 const formSchema = z.object({

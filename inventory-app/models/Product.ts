@@ -14,6 +14,7 @@ interface IProduct extends Document {
   status: 'draft' | 'active' | 'archived';
   notes?: string;
   createdAt: Date;
+  deletedAt?: Date | null;
 }
 
 const slugify = (value: string) =>
@@ -39,6 +40,7 @@ const ProductSchema: Schema<IProduct> = new Schema(
     status: { type: String, enum: ['draft', 'active', 'archived'], default: 'draft' },
     notes: { type: String, trim: true },
     createdAt: { type: Date, default: Date.now },
+    deletedAt: { type: Date, default: null },
   },
   {
     timestamps: false,

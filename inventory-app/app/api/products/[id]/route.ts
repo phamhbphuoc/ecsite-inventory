@@ -17,6 +17,7 @@ const productSchema = z.object({
   stock: z.number().min(0).default(0),
   status: z.enum(['draft', 'active', 'archived']).default('draft'),
   notes: z.string().optional(),
+  deletedAt: z.date().nullable().optional(),
 });
 
 const updateSchema = productSchema.partial();
@@ -49,7 +50,11 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   await dbConnect();
-  const deleted = await Product.findByIdAndDelete(params.id);
+  const deleted = await Product.findByIdAndUpdate(
+    params.id,
+    { deletedAt: new Date() },
+    { new: true }
+  );
   if (!deleted) return NextResponse.json({ message: 'Not found' }, { status: 404 });
-  return NextResponse.json({ message: 'Deleted' });
+  return NextResponse.json({ message: 'Soft-deleted' });
 }

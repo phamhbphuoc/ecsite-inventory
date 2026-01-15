@@ -17,6 +17,7 @@ const productSchema = z.object({
   stock: z.number().min(0).default(0),
   status: z.enum(['draft', 'active', 'archived']).default('draft'),
   notes: z.string().optional(),
+  deletedAt: z.date().nullable().optional(),
 });
 
 export async function GET(req: Request) {
@@ -26,7 +27,7 @@ export async function GET(req: Request) {
   const limit = Number(searchParams.get('limit') || '20');
   const search = searchParams.get('search') || '';
 
-  const query: Record<string, unknown> = {};
+  const query: Record<string, unknown> = { deletedAt: null };
   if (search) {
     query.$or = [
       { title: { $regex: search, $options: 'i' } },
