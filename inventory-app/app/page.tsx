@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import DashboardContent, { type Product } from '@/components/dashboard/DashboardContent';
+import { redirect } from 'next/navigation';
 
 async function fetchProducts() {
   const cookieHeader = cookies().toString();
@@ -15,6 +16,11 @@ async function fetchProducts() {
   if (!res.ok) {
     // Avoid JSON parse on HTML error bodies (e.g., middleware redirect)
     const text = await res.text();
+    if (res.status === 401) {
+      const loginUrl = new URL('/login', base);
+      loginUrl.searchParams.set('redirect', '/');
+      redirect(loginUrl.pathname + loginUrl.search);
+    }
     throw new Error(`Failed to load products: ${res.status} ${res.statusText} - ${text.slice(0, 120)}`);
   }
 
