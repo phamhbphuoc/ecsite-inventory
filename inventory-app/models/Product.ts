@@ -15,6 +15,7 @@ interface IProduct extends Document {
   notes?: string;
   createdAt: Date;
   deletedAt?: Date | null;
+  order?: number;
 }
 
 const slugify = (value: string) =>
@@ -41,6 +42,7 @@ const ProductSchema: Schema<IProduct> = new Schema(
     notes: { type: String, trim: true },
     createdAt: { type: Date, default: Date.now },
     deletedAt: { type: Date, default: null },
+    order: { type: Number, default: 0, index: true },
   },
   {
     timestamps: false,

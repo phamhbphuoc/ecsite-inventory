@@ -18,6 +18,7 @@ const productSchema = z.object({
   status: z.enum(['draft', 'active', 'archived']).default('draft'),
   notes: z.string().optional(),
   deletedAt: z.date().nullable().optional(),
+  order: z.number().int().nonnegative().optional(),
 });
 
 const updateSchema = productSchema.partial();

@@ -19,6 +19,7 @@ export type ProductData = {
   status?: 'draft' | 'active' | 'archived';
   notes?: string;
   deletedAt?: string | Date | null;
+  order?: number;
 };
 
 const formSchema = z.object({
@@ -285,19 +286,19 @@ const ProductForm = ({ product }: ProductFormProps) => {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <label htmlFor="title" className="block">Title</label>
-        <input {...register('title')} id="title" className="h-12 w-full border" />
+        <input {...register('title')} id="title" className="h-12 w-full rounded-md border px-3" />
         {errors.title && <p className="text-red-500">{errors.title.message}</p>}
       </div>
 
       <div>
         <label htmlFor="slug" className="block">Slug (optional)</label>
-        <input {...register('slug')} id="slug" className="h-12 w-full border" />
+        <input {...register('slug')} id="slug" className="h-12 w-full rounded-md border px-3" />
         <p className="text-xs text-gray-500">Leave blank to auto-generate.</p>
       </div>
 
       <div>
         <label htmlFor="description" className="block">Description</label>
-        <textarea {...register('description')} id="description" className="h-24 w-full border" />
+        <textarea {...register('description')} id="description" className="h-24 w-full rounded-md border px-3 py-2" />
       </div>
 
       <div>
@@ -307,7 +308,7 @@ const ProductForm = ({ product }: ProductFormProps) => {
           id="priceSelling"
           type="number"
           inputMode="numeric"
-          className="h-12 w-full border"
+          className="h-12 w-full rounded-md border px-3"
           placeholder="e.g., 150000"
         />
         {errors.priceSelling && <p className="text-red-500">{errors.priceSelling.message}</p>}
@@ -320,7 +321,7 @@ const ProductForm = ({ product }: ProductFormProps) => {
           id="priceOriginal"
           type="number"
           inputMode="numeric"
-          className="h-12 w-full border"
+          className="h-12 w-full rounded-md border px-3"
           placeholder="e.g., 1200"
         />
         {errors.priceOriginal && <p className="text-red-500">{errors.priceOriginal.message}</p>}
@@ -449,13 +450,13 @@ const ProductForm = ({ product }: ProductFormProps) => {
 
       <div>
         <label htmlFor="stock" className="block">Stock</label>
-        <input {...register('stock', { valueAsNumber: true })} id="stock" type="number" className="h-12 w-full border" />
+        <input {...register('stock', { valueAsNumber: true })} id="stock" type="number" className="h-12 w-full rounded-md border px-3" />
         {errors.stock && <p className="text-red-500">{errors.stock.message}</p>}
       </div>
 
       <div>
         <label htmlFor="status" className="block">Status</label>
-        <select {...register('status')} id="status" className="h-12 w-full border">
+        <select {...register('status')} id="status" className="h-12 w-full rounded-md border px-3">
           <option value="draft">Draft</option>
           <option value="active">Active</option>
           <option value="archived">Archived</option>
@@ -464,7 +465,7 @@ const ProductForm = ({ product }: ProductFormProps) => {
 
       <div>
         <label htmlFor="notes" className="block">Notes</label>
-        <textarea {...register('notes')} id="notes" className="h-20 w-full border" />
+        <textarea {...register('notes')} id="notes" className="h-20 w-full rounded-md border px-3 py-2" />
       </div>
 
       <button type="submit" className="h-12 w-full bg-blue-500 text-white" disabled={isSubmitting}>

@@ -18,6 +18,7 @@ const productSchema = z.object({
   status: z.enum(['draft', 'active', 'archived']).default('draft'),
   notes: z.string().optional(),
   deletedAt: z.date().nullable().optional(),
+  order: z.number().int().nonnegative().optional(),
 });
 
 export async function GET(req: Request) {
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
 
   const [data, total] = await Promise.all([
     Product.find(query)
-      .sort({ createdAt: -1 })
+      .sort({ order: 1, createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit),
     Product.countDocuments(query),
@@ -61,7 +62,15 @@ export async function POST(request: Request) {
   const payload = parsedBody.data;
   const slug = payload.slug ? slugify(payload.slug) : slugify(payload.title);
 
-  const newProduct = new Product({ ...payload, slug });
+  // Ensure new products append to end of their category
+  const category = payload.category || 'Uncategorized';
+  if (payload.order === undefined) {
+    const last = await Product.find({ category, deletedAt: null }).sort({ order: -1 }).limit(1);
+    const nextOrder = last.length ? (last[0].order ?? 0) + 1 : 0;
+    payload.order = nextOrder;
+  }
+
+  const newProduct = new Product({ ...payload, slug, category });
   await newProduct.save();
   return NextResponse.json(newProduct, { status: 201 });
 }

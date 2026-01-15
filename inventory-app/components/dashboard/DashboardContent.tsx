@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ProductCard from '@/components/products/ProductCard';
 
 export type Product = {
@@ -12,31 +12,49 @@ export type Product = {
   stock?: number;
   status?: 'draft' | 'active' | 'archived';
   category?: string;
+  order?: number;
 };
 
 type Grouped = Record<string, Product[]>;
 
 function groupProducts(products: Product[]): Grouped {
-  return products.reduce<Grouped>((acc, item) => {
+  const grouped = products.reduce<Grouped>((acc, item) => {
     const key = item.category || 'Uncategorized';
     if (!acc[key]) acc[key] = [];
     acc[key].push(item);
     return acc;
   }, {});
+
+  Object.keys(grouped).forEach((key) => {
+    grouped[key].sort((a, b) => {
+      const ao = a.order ?? Number.MAX_SAFE_INTEGER;
+      const bo = b.order ?? Number.MAX_SAFE_INTEGER;
+      if (ao === bo) return 0;
+      return ao - bo;
+    });
+  });
+
+  return grouped;
 }
 
 export default function DashboardContent({ products }: { products: Product[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [items, setItems] = useState<Product[]>(products);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  // Keep local state in sync with server data when products change
+  useEffect(() => setItems(products), [products]);
 
   const categories = useMemo(
-    () => Array.from(new Set(products.map((p) => p.category || 'Uncategorized'))),
-    [products]
+    () => Array.from(new Set(items.map((p) => p.category || 'Uncategorized'))),
+    [items]
   );
 
   const filtered = useMemo(() => {
-    if (selected.size === 0) return products;
-    return products.filter((p) => selected.has(p.category || 'Uncategorized'));
-  }, [products, selected]);
+    if (selected.size === 0) return items;
+    return items.filter((p) => selected.has(p.category || 'Uncategorized'));
+  }, [items, selected]);
 
   const grouped = useMemo(() => groupProducts(filtered), [filtered]);
 
@@ -53,6 +71,43 @@ export default function DashboardContent({ products }: { products: Product[] }) 
   };
 
   const clear = () => setSelected(new Set());
+
+  const reorderCategory = async (category: string, id: string, direction: 'up' | 'down') => {
+    const cat = category || 'Uncategorized';
+    let newOrderIds: string[] = [];
+
+    setItems((prev) => {
+      const inCat = prev.filter((p) => (p.category || 'Uncategorized') === cat);
+      const others = prev.filter((p) => (p.category || 'Uncategorized') !== cat);
+      const sorted = [...inCat].sort((a, b) => {
+        const ao = a.order ?? Number.MAX_SAFE_INTEGER;
+        const bo = b.order ?? Number.MAX_SAFE_INTEGER;
+        if (ao === bo) return 0;
+        return ao - bo;
+      });
+      const idx = sorted.findIndex((p) => p._id === id);
+      if (idx === -1) return prev;
+      const swap = direction === 'up' ? idx - 1 : idx + 1;
+      if (swap < 0 || swap >= sorted.length) return prev;
+      [sorted[idx], sorted[swap]] = [sorted[swap], sorted[idx]];
+      const reassigned = sorted.map((p, i) => ({ ...p, order: i }));
+      newOrderIds = reassigned.map((p) => p._id);
+      return [...others, ...reassigned];
+    });
+
+    if (!newOrderIds.length) return;
+
+    setSaving(id);
+    try {
+      await fetch('/api/products/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: cat, ids: newOrderIds }),
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
@@ -98,12 +153,8 @@ export default function DashboardContent({ products }: { products: Product[] }) 
               <span className="text-xs text-gray-500">{items.length} items</span>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((product) => (
-                <Link
-                  key={product._id}
-                  href={`/products/${product._id}`}
-                  className="transition hover:-translate-y-0.5 hover:shadow"
-                >
+              {items.map((product, idx) => {
+                const card = (
                   <ProductCard
                     title={product.title}
                     images={product.images}
@@ -112,20 +163,59 @@ export default function DashboardContent({ products }: { products: Product[] }) 
                     status={product.status}
                     category={product.category}
                   />
-                </Link>
-              ))}
+                );
+
+                if (reorderMode) {
+                  return (
+                    <div key={product._id} className="relative rounded border p-1">
+                      <div className="absolute right-2 top-2 flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => reorderCategory(cat, product._id, 'up')}
+                          disabled={idx === 0 || saving === product._id}
+                          className="rounded border bg-white px-2 py-1 text-xs shadow disabled:opacity-40"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => reorderCategory(cat, product._id, 'down')}
+                          disabled={idx === items.length - 1 || saving === product._id}
+                          className="rounded border bg-white px-2 py-1 text-xs shadow disabled:opacity-40"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                      {card}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={product._id}
+                    href={`/products/${product._id}`}
+                    className="transition hover:-translate-y-0.5 hover:shadow"
+                  >
+                    {card}
+                  </Link>
+                );
+              })}
             </div>
           </section>
         ))}
       </div>
 
-      <Link
-        href="/products/new"
-        className="fixed bottom-6 right-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition hover:bg-blue-700"
-        aria-label="Add product"
+      <button
+        type="button"
+        onClick={() => setReorderMode((v) => !v)}
+        className={`fixed bottom-6 right-6 inline-flex h-14 items-center justify-center rounded-full px-4 text-white shadow-lg transition ${
+          reorderMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'
+        }`}
+        aria-label="Toggle reorder mode"
       >
-        +
-      </Link>
+        {reorderMode ? 'Done' : 'Reorder'}
+      </button>
     </main>
   );
 }
