@@ -82,7 +82,7 @@ const ProductForm = ({ product }: ProductFormProps) => {
     },
   });
 
-  const baseCategoryOptions = ['Uncategorized', 'Supplements', 'Cosmetics', 'Food'];
+  const baseCategoryOptions = ['Uncategorized'];
   const [categoryOptions, setCategoryOptions] = React.useState<string[]>(baseCategoryOptions);
   const [showCategoryList, setShowCategoryList] = React.useState(false);
   const [categoryInput, setCategoryInput] = React.useState('');

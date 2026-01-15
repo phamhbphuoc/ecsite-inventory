@@ -1,16 +1,5 @@
-import Link from 'next/link';
 import { cookies } from 'next/headers';
-import ProductCard from '@/components/products/ProductCard';
-
-type Product = {
-  _id: string;
-  title: string;
-  images?: string[];
-  price: { selling: number; original?: number };
-  stock?: number;
-  status?: 'draft' | 'active' | 'archived';
-  category?: string;
-};
+import DashboardContent, { type Product } from '@/components/dashboard/DashboardContent';
 
 async function fetchProducts() {
   const cookieHeader = cookies().toString();
@@ -35,38 +24,5 @@ async function fetchProducts() {
 
 export default async function HomePage() {
   const products = await fetchProducts();
-
-  return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Inventory</h1>
-          <p className="text-sm text-gray-600">Manage products</p>
-        </div>
-      </div>
-
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((product) => (
-          <Link key={product._id} href={`/products/${product._id}`} className="transition hover:-translate-y-0.5 hover:shadow">
-            <ProductCard
-              title={product.title}
-              images={product.images}
-              price={product.price}
-              stock={product.stock}
-              status={product.status}
-              category={product.category}
-            />
-          </Link>
-        ))}
-      </section>
-
-      <Link
-        href="/products/new"
-        className="fixed bottom-6 right-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition hover:bg-blue-700"
-        aria-label="Add product"
-      >
-        +
-      </Link>
-    </main>
-  );
+  return <DashboardContent products={products} />;
 }
