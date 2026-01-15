@@ -1,12 +1,12 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import DashboardContent, { type Product } from '@/components/dashboard/DashboardContent';
 import { redirect } from 'next/navigation';
 
 async function fetchProducts() {
   const cookieHeader = cookies().toString();
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const host = headers().get('host');
+  const proto = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+  const base = host ? `${proto}://${host}` : '';
 
   const res = await fetch(`${base}/api/products?limit=20`, {
     cache: 'no-store',
