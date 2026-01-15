@@ -21,7 +21,13 @@ export function middleware(req: NextRequest) {
     const [_, pin] = decoded.split(':');
     if (pin === APP_PIN) {
       const res = NextResponse.next();
-      res.cookies.set(COOKIE_NAME, '1', { path: '/', httpOnly: true });
+      res.cookies.set(COOKIE_NAME, '1', {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: true,
+        maxAge: 60 * 60 * 24 * 7,
+      });
       return res;
     }
   }
