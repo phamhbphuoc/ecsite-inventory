@@ -170,6 +170,18 @@ const ProductForm = ({ product }: ProductFormProps) => {
         formData.append('file', file);
         formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
+        // Optional metadata to help trace images back to products (requires preset to allow context/tags)
+        const tags: string[] = ['inventory-app'];
+        if (product?._id) tags.push(`product:${product._id}`);
+        if (product?.slug) tags.push(`slug:${product.slug}`);
+        formData.append('tags', tags.join(','));
+        if (product?._id || product?.slug) {
+          const ctx: string[] = [];
+          if (product?._id) ctx.push(`product_id=${product._id}`);
+          if (product?.slug) ctx.push(`slug=${product.slug}`);
+          formData.append('context', ctx.join('|'));
+        }
+
         const res = await fetch(getUploadUrl(), { method: 'POST', body: formData });
         if (!res.ok) {
           const text = await res.text();
